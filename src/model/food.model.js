@@ -14,8 +14,19 @@ const foodModel = {
   },
 
   //   sql to insert recipe
-  insertRecipe: ({ video, nama_resep, resep, image }) => {
-    const sql = `INSERT INTO resep (video, nama_resep, resep, image) VALUES ('${video}','${nama_resep}','${resep}','${image}')`;
+  insertRecipe: ({ user_id, video, nama_resep, resep, image }) => {
+    const sql = `INSERT INTO resep (user_id, video, nama_resep, resep, image) VALUES (${user_id}, '${video}','${nama_resep}','${resep}','${image}')`;
+    return new Promise((resolve, reject) => {
+      db.query(sql, (err, result) => {
+        if (err) {
+          reject(err);
+        }
+        resolve(result);
+      });
+    });
+  },
+  insertRecipeWeb: ({ video, nama_resep, resep, image }) => {
+    const sql = `INSERT INTO resep ( video, nama_resep, resep, image) VALUES ('${video}','${nama_resep}','${resep}','${image}')`;
     return new Promise((resolve, reject) => {
       db.query(sql, (err, result) => {
         if (err) {
@@ -39,8 +50,10 @@ const foodModel = {
   },
 
   // sql update recipe
-  updateData: ({ id, video, nama_resep, resep }) => {
-    const sql = `UPDATE resep SET video='${video}', nama_resep='${nama_resep}', resep='${resep}' WHERE id=${id}`;
+  // foodModel.js
+  updateRecipe: (id, data) => {
+    const { video, nama_resep, resep, image } = data;
+    const sql = `UPDATE resep SET video = '${video}', nama_resep = '${nama_resep}', resep = '${resep}', image = '${image}' WHERE id = ${id}`;
     return new Promise((resolve, reject) => {
       db.query(sql, (err, result) => {
         if (err) {
@@ -64,9 +77,12 @@ const foodModel = {
     });
   },
   // pagination
-  paginate: (limit, offset) => {
-    const sql = `SELECT * FROM resep LIMIT ${limit} OFFSET ${offset}`;
+  paginate: (limit, offset, sort) => {
     return new Promise((resolve, reject) => {
+      const order = sort === "desc" ? "DESC" : "ASC"; // Menentukan urutan sorting berdasarkan nilai sort
+
+      const sql = `SELECT * FROM resep ORDER BY nama_resep ${order} LIMIT ${limit} OFFSET ${offset}`;
+
       db.query(sql, (err, result) => {
         if (err) {
           reject(err);
@@ -75,7 +91,7 @@ const foodModel = {
       });
     });
   },
-  //  redis
+  //  select by id
   selectByID: (id) => {
     return new Promise((resolve, reject) => {
       db.query(`SELECT * FROM resep WHERE id=${id}`, (err, result) => {
@@ -112,6 +128,23 @@ const foodModel = {
       });
     });
   },
+
+  getRecipesWithUser: (user_id) => {
+    const sql = `SELECT resep.*, login.name, login.email
+                 FROM resep
+                 JOIN login ON resep.user_id = login.id
+                 WHERE login.id = ${user_id}`;
+    return new Promise((resolve, reject) => {
+      db.query(sql, (err, result) => {
+        if (err) {
+          reject(err);
+        }
+        resolve(result);
+      });
+    });
+  },
+
+  // update a recipe
 };
 
 module.exports = foodModel;

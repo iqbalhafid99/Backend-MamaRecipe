@@ -16,14 +16,17 @@ const multerUpload = multer({
   }),
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    if (ext === ".jpg" || ext === ".png") {
+    if (ext === ".jpg" || ext === ".png" || ext === ".jpeg") {
       cb(null, true);
     } else {
       const error = {
-        message: "gambar harus png atau jpg",
+        message: "gambar harus png atau jpg dan jpeg",
       };
       cb(error, false);
     }
+  },
+  limits: {
+    fileSize: 2 * 1024 * 1024,
   },
 });
 

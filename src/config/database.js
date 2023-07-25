@@ -12,7 +12,6 @@ const db = new pg.Pool({
   // },
 });
 
-// pengkondisian
 db.connect((err) => {
   if (err) {
     console.log(err);

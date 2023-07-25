@@ -3,6 +3,8 @@ const response = require("../helper/respone");
 const client = require("../config/redis");
 const { json } = require("body-parser");
 const fs = require("fs-extra");
+const jwt = require("jsonwebtoken");
+const cloudinary = require("../helper/cloudinary");
 
 // Food list
 const foodController = {
@@ -33,11 +35,18 @@ const foodController = {
       });
   },
 
-  //   new recipe
-  insertRecipe: (req, res) => {
+  //   new recipe Global
+  insertRecipe: async (req, res) => {
     const { video, nama_resep, resep } = req.body;
     const image = req.file.filename;
+    // const image = await cloudinary.uploader.upload(req.file.path);
+    // console.log(image);
+    const cookie = req.headers.cookie;
+    const token = cookie.replace("token=", "");
+    const decodedToken = jwt.verify(token, "contoh123");
+    const user_id = decodedToken.id;
     const data = {
+      user_id,
       video,
       nama_resep,
       resep,
@@ -46,7 +55,30 @@ const foodController = {
     foodModel
       .insertRecipe(data)
       .then((result) => {
+        console.log(data);
         response(200, result.rowCount, "Recipe succsess added!", res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  },
+
+  // insert recipe in website
+  insertRecipeWeb: (req, res) => {
+    const { video, nama_resep, resep } = req.body;
+    const image = req.file.filename;
+
+    const data = {
+      video,
+      nama_resep,
+      resep,
+      image,
+    };
+    foodModel
+      .insertRecipeWeb(data)
+      .then((result) => {
+        console.log(image);
+        response(200, result.rowCount, "Recipe success added!", res);
       })
       .catch((err) => {
         console.log(err);
@@ -55,43 +87,53 @@ const foodController = {
 
   //   update recipe
   updateRecipe: (req, res) => {
-    const id = req.params.id;
+    const { id } = req.params;
     const { video, nama_resep, resep } = req.body;
+    const image = req.file.filename; // Jika ada perubahan gambar, selain gambar akan diabaikan
     const data = {
-      id,
       video,
       nama_resep,
       resep,
+      image,
     };
     foodModel
-      .updateData(data)
+      .updateRecipe(id, data)
       .then((result) => {
-        response(200, result.rowCount, "Recipe succsessfully added!", res);
+        if (result.rowCount > 0) {
+          response(200, result.rowCount, "Recipe successfully updated!", res);
+        } else {
+          response(404, 0, "Recipe not found!", res);
+        }
       })
       .catch((err) => {
         console.log(err);
+        response(500, 0, "Internal server error", res);
       });
   },
 
   //   delete recipe
   destroyRecipe: (req, res) => {
-    const id = req.params.id;
-    fs.unlinkSync(`./public/${id}`);
+    const { id } = req.params;
     foodModel
       .destroyData(id)
       .then((result) => {
-        response(200, result.rowCount, "Recipe Deleted", res);
+        if (result.rowCount > 0) {
+          response(200, result.rowCount, "Recipe successfully deleted!", res);
+        } else {
+          response(404, 0, "Recipe not found!", res);
+        }
       })
       .catch((err) => {
         console.log(err);
+        response(500, 0, "Internal server error", res);
       });
   },
 
   // delete image
 
-  // destroyImage: (req, res) => {
+  // destroyRecipe: (req, res) => {
   //   const id = req.params.id;
-  //   fs.unlinkSync(`./public/${id}`)
+  //   fs.unlinkSync(`./public/${id}`);
   //   foodModel
   //     .destroyData(id)
   //     .then((result) => {
@@ -102,26 +144,28 @@ const foodController = {
   //     });
   // },
 
-  paginate: (req, res) => {
-    const { limit, page } = req.query;
+  paginate: async (req, res) => {
+    const { limit, page, sort } = req.query;
     const pageValue = page ? Number(page) : 1;
-    const limitValue = limit ? Number(limit) : 2;
+    const limitValue = limit ? Number(limit) : 5;
     const offsetValue = pageValue === 1 ? 0 : (pageValue - 1) * limitValue;
 
-    foodModel
-      .paginate(limitValue, offsetValue)
-      .then((result) => {
-        const pagination = {
-          cuurentPage: pageValue,
-          dataperPage: limitValue,
-        };
-
-        response(200, result.rows, "Recipe List!", res);
-        // res.send(pagination);
-      })
-      .catch((err) => {
-        console.log(err);
+    try {
+      const foods = await foodModel.paginate(limitValue, offsetValue, sort);
+      const pagination = {
+        currentPage: pageValue,
+        dataPerPage: limitValue,
+      };
+      res.status(200).json({
+        foods,
+        pagination,
       });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: "Failed to fetch foods",
+      });
+    }
   },
 
   // Redis
@@ -187,6 +231,27 @@ const foodController = {
       .sortFood(columnName, sort)
       .then((result) => {
         response(200, result.rows, "Sorted Food List!", res);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  },
+
+  getRecipesWithUser: (req, res) => {
+    const cookie = req.headers.cookie;
+    const token = cookie.replace("token=", "");
+
+    const decodedToken = jwt.verify(token, "contoh123");
+    const user_id = decodedToken.id;
+    foodModel
+      .getRecipesWithUser(user_id)
+      .then((result) => {
+        response(
+          200,
+          result.rows,
+          "Recipes with User retrieved successfully!",
+          res
+        );
       })
       .catch((err) => {
         console.log(err);
