@@ -1,6 +1,6 @@
 # Mama Recipe REST API
 
-![Logo](https://i.postimg.cc/JnsbMGwj/mamarecipe-logo.png)
+<img src="https://i.postimg.cc/JnsbMGwj/mamarecipe-logo.png" alt="Logo" width="150" height="180">
 
 Welcome to Mama Recipe's RESTful API! This API serves as the backend for the Mama Recipe website, bringing a delectable collection of recipes right at your fingertips.
 
